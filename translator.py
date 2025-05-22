@@ -11,6 +11,8 @@ pip install googletrans==4.0.0-rc1
 
 pip install PyMuPDF
 
+pip install reportlab
+
 from IPython import get_ipython
 from IPython.display import display
 import nltk
@@ -38,25 +40,25 @@ def keywords_spaCy(text):
 
 keywords_spaCy("This is an example of removing stopwords from a sentence.")
 
-def remove_stopwords(sentence):
-  words = word_tokenize(sentence)
-  filtered_words = [word for word in words if word.lower() not in stopwords.words('english')]
-  #print("Original:", sentence)
-  filtered = " ".join(filtered_words)
-  no_punct = filtered.translate(str.maketrans('', '', string.punctuation))
-  #print("Filtered: ", no_punct)
-  return no_punct
+## def remove_stopwords(sentence):
+##   words = word_tokenize(sentence)
+##   filtered_words = [word for word in words if word.lower() not in stopwords.words('english')]
+##   #print("Original:", sentence)
+##   filtered = " ".join(filtered_words)
+##   no_punct = filtered.translate(str.maketrans('', '', string.punctuation))
+##   #print("Filtered: ", no_punct)
+##   return no_punct
 
-remove_stopwords("This is an example of removing stopwords from a sentence.")
+## remove_stopwords("This is an example of removing stopwords from a sentence.")
 
-def split_up(filtered):
-  list = filtered.split(' ')
-  while '' in list:
-    list.remove('')
-  print(list)
-  return list
+## def split_up(filtered):
+##   list = filtered.split(' ')
+##   while '' in list:
+##     list.remove('')
+##   print(list)
+##   return list
 
-split_up(remove_stopwords("This is an example of removing stopwords from a sentence."))
+## split_up(remove_stopwords("This is an example of removing stopwords from a sentence."))
 
 """Code to translate the individual words below:"""
 
@@ -66,11 +68,12 @@ translator = Translator()
 
 def translate(lang, list):
   translated_words = [translator.translate(word, dest=lang).text for word in list]
+  translation_list = []
   for original, translated in zip(list, translated_words):
-    print(f"{original:<15} →        {translated}")
-  #return translated_words
+    translation_list.append((f"{original:<15} →        {translated}"))
+  return translation_list
 
-translate("ta", split_up(remove_stopwords("Place the People rectangles in the circles on the Data Privacy Spheres sheet starting with the people that you consider closest to you in circle 1 and the people least close to you in circle 7. ")))
+## translate("ta", split_up(remove_stopwords("Place the People rectangles in the circles on the Data Privacy Spheres sheet starting with the people that you consider closest to you in circle 1 and the people least close to you in circle 7. ")))
 
 translate("ta", keywords_spaCy("Place the People rectangles in the circles on the Data Privacy Spheres sheet starting with the people that you consider closest to you in circle 1 and the people least close to you in circle 7. "))
 
@@ -96,27 +99,45 @@ def extract(pdf_path):
 
 translate("ta", keywords_spaCy(extract("examplePDF.pdf")))
 
-translate("ta", keywords_spaCy(extract("examplePDF.pdf")))
+"""Export as PDF"""
 
-extract("examplePDF.pdf")
+from reportlab.lib.pagesizes import LETTER
+from reportlab.pdfgen import canvas
 
-import os
+from googletrans import LANGUAGES
 
-pdf_path = os.path.join(os.getcwd(), "examplePDF.pdf")
+def export_text_to_pdf(output_filename, text_lines):
+    # Create a new PDF canvas
+    c = canvas.Canvas(output_filename, pagesize=LETTER)
+    width, height = LETTER
 
-# Check if the file exists in the current working directory
-if os.path.exists(pdf_path):
-    print(f"File exists at {pdf_path}")
-else:
-    print("❌ File does not exist at the current path.")
+    # Set starting position
+    x = 50
+    y = height - 50
 
-print(f"Path being used in Python: {pdf_path}")
+    # Write each line to the PDF
+    for line in text_lines:
+        c.drawString(x, y, line)
+        y -= 15  # Move down for the next line
 
-from google.colab import files
+        # If page overflow, start new page
+        if y < 50:
+            c.showPage()
+            y = height - 50
 
-# Upload the PDF
-uploaded = files.upload()
+    # Save the PDF
+    c.save()
+    files.download(output_filename)
 
-# The uploaded file will be stored in the '/content/' directory.
-pdf_path = list(uploaded.keys())[0]  # Get the file name
-print(f"PDF file uploaded: {pdf_path}")
+export_text_to_pdf("output.pdf", translate("ta", keywords_spaCy(extract("examplePDF.pdf"))))
+
+def create_pdf(language, file):
+  language_code = next((code for code, name in LANGUAGES.items() if name.lower() == language.lower()), None)
+  if (language_code is None):
+    print("Invalid language name")
+    return
+  translated_text = translate(language_code, keywords_spaCy(extract(file)))
+  filename = file.removesuffix(".pdf") + language + ".pdf"
+  export_text_to_pdf(filename, translated_text)
+
+create_pdf("Spanish", "examplePDF.pdf")
