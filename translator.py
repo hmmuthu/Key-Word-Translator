@@ -13,6 +13,8 @@ pip install PyMuPDF
 
 pip install reportlab
 
+pip install python-docx
+
 from IPython import get_ipython
 from IPython.display import display
 import nltk
@@ -106,6 +108,19 @@ from reportlab.pdfgen import canvas
 
 from googletrans import LANGUAGES
 
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from google.colab import files
+
+# Download a NotoSans font file (replace with a suitable URL if needed)
+!wget -O NotoSans-Regular.ttf https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf
+
+# Register the NotoSans font
+pdfmetrics.registerFont(TTFont('NotoSans', 'NotoSans-Regular.ttf'))
+
+uploaded = files.upload()
+pdfmetrics.registerFont(TTFont('ArialUnicode', 'ArialUnicodeMS copy.ttf'))
+
 def export_text_to_pdf(output_filename, text_lines):
     # Create a new PDF canvas
     c = canvas.Canvas(output_filename, pagesize=LETTER)
@@ -115,14 +130,17 @@ def export_text_to_pdf(output_filename, text_lines):
     x = 50
     y = height - 50
 
+    c.setFont('ArialUnicode', 12)
+
     # Write each line to the PDF
     for line in text_lines:
         c.drawString(x, y, line)
-        y -= 15  # Move down for the next line
+        y -= 15
 
-        # If page overflow, start new page
+        # new page
         if y < 50:
             c.showPage()
+            c.setFont('ArialUnicode', 12)  # Reset font on new page
             y = height - 50
 
     # Save the PDF
@@ -140,4 +158,4 @@ def create_pdf(language, file):
   filename = file.removesuffix(".pdf") + language + ".pdf"
   export_text_to_pdf(filename, translated_text)
 
-create_pdf("Spanish", "examplePDF.pdf")
+create_pdf("spanish", "examplePDF.pdf")
