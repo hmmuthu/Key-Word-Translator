@@ -42,6 +42,16 @@ def keywords_spaCy(text):
 
 keywords_spaCy("This is an example of removing stopwords from a sentence.")
 
+def remove_duplicates_case_insensitive(strings):
+    seen = set()
+    result = []
+    for s in strings:
+        key = s.lower()  # case insensitive
+        if key not in seen:
+            seen.add(key)
+            result.append(s)
+    return result
+
 ## def remove_stopwords(sentence):
 ##   words = word_tokenize(sentence)
 ##   filtered_words = [word for word in words if word.lower() not in stopwords.words('english')]
@@ -99,7 +109,10 @@ def extract(pdf_path):
             text += page.get_text()
   return text
 
-translate("ta", keywords_spaCy(extract("examplePDF.pdf")))
+for filename in uploaded.keys():
+    print(f"Uploaded file name: {filename}")
+
+# translate("ta", keywords_spaCy(extract(filename)))
 
 """Export as PDF"""
 
@@ -154,8 +167,36 @@ def create_pdf(language, file):
   if (language_code is None):
     print("Invalid language name")
     return
-  translated_text = translate(language_code, keywords_spaCy(extract(file)))
+  translated_text = remove_duplicates_case_insensitive(translate(language_code, keywords_spaCy(extract(file))))
   filename = file.removesuffix(".pdf") + language + ".pdf"
   export_text_to_pdf(filename, translated_text)
 
-create_pdf("spanish", "examplePDF.pdf")
+create_pdf("arabic", "examplePDF.pdf")
+
+"""GUI"""
+
+from google.colab import files
+import ipywidgets as widgets
+from IPython.display import display
+
+# Upload file
+uploaded = files.upload()
+
+# Language input
+lang_input = widgets.Text(
+    value='',
+    placeholder='e.g. French',
+    description='Language:',
+    disabled=False
+)
+
+# Define what happens when Enter is pressed
+def on_enter(change):
+    if change['name'] == 'value' and change['type'] == 'change':
+        print(f"Language entered: {change['new']}")
+
+# Attach the event handler
+lang_input.observe(on_enter)
+
+# Display the widget
+display(lang_input)
