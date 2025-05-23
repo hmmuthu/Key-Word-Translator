@@ -30,13 +30,16 @@ nltk.download('stopwords')
 !python -m spacy download en_core_web_sm
 
 import spacy
+import re
 
 nlp = spacy.load("en_core_web_sm")
 
 def keywords_spaCy(text):
   doc = nlp(text)
+  # Remove any digit characters from each string
   target_pos = {"NOUN", "VERB", "ADJ", "ADV"}
   filtered = [token.text for token in doc if token.pos_ in target_pos]
+  #cleaned = [re.sub(r'\d+', '', item) for item in filtered]
   #print("Original:", text)
   return filtered
 
@@ -52,25 +55,42 @@ def remove_duplicates_case_insensitive(strings):
             result.append(s)
     return result
 
-## def remove_stopwords(sentence):
-##   words = word_tokenize(sentence)
-##   filtered_words = [word for word in words if word.lower() not in stopwords.words('english')]
-##   #print("Original:", sentence)
-##   filtered = " ".join(filtered_words)
-##   no_punct = filtered.translate(str.maketrans('', '', string.punctuation))
-##   #print("Filtered: ", no_punct)
-##   return no_punct
+def has_letters_and_digits(s):
+    return bool(re.search(r'[A-Za-z]', s)) and bool(re.search(r'\d', s))
 
-## remove_stopwords("This is an example of removing stopwords from a sentence.")
+def remove_stopwords(sentence):
+  cleaned = re.sub(r'\b\d+\b', '', sentence)
+  words = word_tokenize(cleaned)
+  filtered_words = [word for word in words if word.lower() not in stopwords.words('english')]
+  #print("Original:", sentence)
+  filtered = " ".join(filtered_words)
+  no_punct = filtered.translate(str.maketrans('', '', string.punctuation))
+  #rem_num = [s for s in no_punct if not has_letters_and_digits(s)]
+  #print("Filtered: ", no_punct)
+  return no_punct
 
-## def split_up(filtered):
-##   list = filtered.split(' ')
-##   while '' in list:
-##     list.remove('')
-##   print(list)
-##   return list
+remove_stopwords("This is an example of removing 2.stopwords from a sentence.")
 
-## split_up(remove_stopwords("This is an example of removing stopwords from a sentence."))
+def split_up(filtered):
+  list = filtered.split(' ')
+  while '' in list:
+    list.remove('')
+  print(list)
+  return list
+
+split_up(remove_stopwords("This is an example of removing stopwords from a sentence."))
+
+!pip install rake-nltk
+
+from rake_nltk import Rake
+
+def keywords_rake(text):
+  r = Rake()
+  r.extract_keywords_from_text(text)
+  keywords = r.get_ranked_phrases()
+  return keywords
+
+keywords_rake("Place the People rectangles in the circles on the Data Privacy Spheres sheet starting with the people that you consider closest to you in circle 1 and the people least close to you in circle 7. ")
 
 """Code to translate the individual words below:"""
 
@@ -167,11 +187,35 @@ def create_pdf(language, file):
   if (language_code is None):
     print("Invalid language name")
     return
-  translated_text = remove_duplicates_case_insensitive(translate(language_code, keywords_spaCy(extract(file))))
+
+  cleaned_lines = remove_stopwords(extract(file))
+  translated_text = remove_duplicates_case_insensitive(translate(language_code, keywords_spaCy(cleaned_lines)))
+  filename = file.removesuffix(".pdf") + " " + language + ".pdf"
+  export_text_to_pdf(filename, translated_text)
+
+create_pdf("arabic", "Example of Template in Use.pdf")
+
+def create_pdf_rake(language, file):
+  language_code = next((code for code, name in LANGUAGES.items() if name.lower() == language.lower()), None)
+  if (language_code is None):
+    print("Invalid language name")
+    return
+  translated_text = remove_duplicates_case_insensitive(translate(language_code, keywords_rake(extract(file))))
   filename = file.removesuffix(".pdf") + language + ".pdf"
   export_text_to_pdf(filename, translated_text)
 
-create_pdf("arabic", "examplePDF.pdf")
+create_pdf_rake("arabic", "Example of Template in Use.pdf")
+
+def create_pdf_stopwords(language, file):
+  language_code = next((code for code, name in LANGUAGES.items() if name.lower() == language.lower()), None)
+  if (language_code is None):
+    print("Invalid language name")
+    return
+  translated_text = remove_duplicates_case_insensitive(translate(language_code, split_up(remove_stopwords(extract(file)))))
+  filename = file.removesuffix(".pdf") + language + ".pdf"
+  export_text_to_pdf(filename, translated_text)
+
+create_pdf_stopwords("arabic", "Example of Template in Use.pdf")
 
 """GUI"""
 
